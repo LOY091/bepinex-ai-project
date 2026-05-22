@@ -51,6 +51,7 @@ def main():
     print("🧠 Sending prompt payload to Hugging Face serverless client...")
     response = requests.post(HF_API_URL, json=payload, headers=headers)
     
+    # --- TYPO FIXED HERE ---
     if response.status_code != 200:
         print(f"❌ HF API Error Code: {response.status_code} - Description: {response.text}")
         ai_response = "⚠️ Server error encountered while executing Hugging Face Inference generation."
