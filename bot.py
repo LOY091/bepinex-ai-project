@@ -6,11 +6,11 @@ import requests
 
 def main():
     github_token = os.getenv("GITHUB_TOKEN")
-    hf_token = os.getenv("HF_TOKEN")
+    gemini_key = os.getenv("GEMINI_API_KEY")
     event_path = os.getenv("GITHUB_EVENT_PATH")
     
-    # Using jsDelivr's stable global network proxy to bypass the GitHub routing glitch
-    HF_API_URL = "https://esm.run/api.huggingface.co/models/Qwen/Qwen2.5-Coder-1.5B-Instruct"
+    # Secure Google API endpoint for Gemini 1.5 Flash
+    GEMINI_API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}"
     
     if not event_path:
         print("❌ Error: Missing GITHUB_EVENT_PATH execution context.")
@@ -34,34 +34,38 @@ def main():
     clean_user_prompt = issue_text.replace("/create-mod", "").strip()
     print(f"🎯 Cleaned user prompt text: {clean_user_prompt}")
     
+    # Structuring the prompt payload for Gemini's API layout
     payload = {
-        "inputs": f"<|im_start|>system\nYou are an expert BepInEx modding assistant. Write clean C# code using HarmonyX patches.<|im_end|>\n<|im_start|>user\n{clean_user_prompt}<|im_end|>\n<|im_start|>assistant\n",
-        "parameters": {
-            "max_new_tokens": 1024, 
-            "temperature": 0.2,
-            "return_full_text": False
-        }
+        "contents": [{
+            "parts": [{
+                "text": f"You are an expert BepInEx modding assistant. Write clean, complete C# code using HarmonyX patches for Unity based on this prompt:\n\n{clean_user_prompt}\n\nReturn ONLY the raw C# code inside a markdown block. Do not write introductory text."
+            }]
+        }]
     }
     
     headers = {
-        "Authorization": f"Bearer {hf_token}",
         "Content-Type": "application/json"
     }
     
-    print("🧠 Routing prompt payload through stable jsDelivr network proxy...")
-    response = requests.post(HF_API_URL, json=payload, headers=headers)
+    print("🧠 Sending payload to Google Gemini Engine...")
+    response = requests.post(GEMINI_API_URL, json=payload, headers=headers)
     
     if response.status_code != 200:
         print(f"❌ API Error Code: {response.status_code} - Description: {response.text}")
-        ai_response = "⚠️ Server error encountered during proxy network execution."
+        ai_response = "⚠️ Server error encountered during Gemini generation execution."
     else:
         raw_result = response.json()
-        if isinstance(raw_result, list) and len(raw_result) > 0:
-            ai_response = raw_result[0].get("generated_text", "").strip()
-        else:
-            ai_response = str(raw_result).strip()
-
-        ai_response = ai_response.split("<|im_end|>")[0].strip()
+        try:
+            # Navigate Gemini's specific JSON response structural path
+            ai_response = raw_result['candidates'][0]['content']['parts'][0]['text'].strip()
+            
+            # If Gemini adds code block wraps itself, strip them so we don't double-wrap down below
+            if ai_response.startswith("```csharp"):
+                ai_response = ai_response.replace("```csharp", "").replace("```", "").strip()
+            elif ai_response.startswith("```"):
+                ai_response = ai_response.replace("```", "").strip()
+        except (KeyError, IndexErrors):
+            ai_response = "⚠️ Failed to cleanly parse response blocks from Gemini API engine."
 
     github_headers = {
         "Authorization": f"token {github_token}",
@@ -70,7 +74,7 @@ def main():
     }
     
     comment_payload = {
-        "body": f"🤖 **Automated BepInEx C# Generation Engine:**\n\n```csharp\n{ai_response}\n```"
+        "body": f"🤖 **Automated BepInEx C# Generation Engine (Gemini Powered):**\n\n```csharp\n{ai_response}\n```"
     }
     
     print("✍️ Posting final code output response block back to GitHub issue stream...")
