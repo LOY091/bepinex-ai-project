@@ -9,17 +9,16 @@ def main():
     gemini_key = os.getenv("GEMINI_API_KEY")
     event_path = os.getenv("GITHUB_EVENT_PATH")
     
-    # Secure Google API endpoint for Gemini 1.5 Flash
+    # Official endpoint syntax structure for Gemini 1.5 Flash
     GEMINI_API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}"
     
     if not event_path:
-        print("❌ Error: Missing GITHUB_EVENT_PATH execution context.")
+        print("❌ Error: Missing GITHUB_EVENT_PATH context.")
         sys.exit(1)
         
     with open(event_path, "r", encoding="utf-8") as f:
         event_data = json.load(f)
         
-    # Safely get text from either a brand new issue or a comment thread
     if "comment" in event_data:
         issue_text = event_data["comment"]["body"]
     else:
@@ -34,7 +33,7 @@ def main():
     clean_user_prompt = issue_text.replace("/create-mod", "").strip()
     print(f"🎯 Cleaned user prompt text: {clean_user_prompt}")
     
-    # Structuring the prompt payload for Gemini's API layout
+    # Corrected direct JSON structure payload for Google's API specs
     payload = {
         "contents": [{
             "parts": [{
@@ -47,25 +46,27 @@ def main():
         "Content-Type": "application/json"
     }
     
-    print("🧠 Sending payload to Google Gemini Engine...")
+    print("🧠 Contacting Gemini API Engine...")
     response = requests.post(GEMINI_API_URL, json=payload, headers=headers)
     
+    # Check if Google returned an actual HTTP error code
     if response.status_code != 200:
-        print(f"❌ API Error Code: {response.status_code} - Description: {response.text}")
-        ai_response = "⚠️ Server error encountered during Gemini generation execution."
+        print(f"❌ API Error Code: {response.status_code} - Details: {response.text}")
+        ai_response = f"⚠️ Gemini Server Error (Status {response.status_code})."
     else:
-        raw_result = response.json()
         try:
-            # Fixed the IndexError parsing block typo here!
+            raw_result = response.json()
+            # Navigating the true response schema path returned by Google Studio
             ai_response = raw_result['candidates'][0]['content']['parts'][0]['text'].strip()
             
-            # If Gemini adds code block wraps itself, strip them so we don't double-wrap down below
+            # Remove any markdown framing if Gemini inserts it inside the raw generation response
             if ai_response.startswith("```csharp"):
                 ai_response = ai_response.replace("```csharp", "").replace("```", "").strip()
             elif ai_response.startswith("```"):
                 ai_response = ai_response.replace("```", "").strip()
-        except (KeyError, IndexError):
-            ai_response = "⚠️ Failed to cleanly parse response blocks from Gemini API engine."
+        except Exception as e:
+            print(f"❌ Structural parsing failed: {str(e)}")
+            ai_response = "⚠️ Failed to parse the response structure from Gemini API."
 
     github_headers = {
         "Authorization": f"token {github_token}",
@@ -77,9 +78,9 @@ def main():
         "body": f"🤖 **Automated BepInEx C# Generation Engine (Gemini Powered):**\n\n```csharp\n{ai_response}\n```"
     }
     
-    print("✍️ Posting final code output response block back to GitHub issue stream...")
+    print("✍️ Posting code response block back to GitHub issue thread...")
     post_res = requests.post(comments_url, json=comment_payload, headers=github_headers)
-    print(f"📡 GitHub Response Status: {post_res.status_code}")
+    print(f"📡 GitHub Action response status code: {post_res.status_code}")
 
 if __name__ == "__main__":
     main()
