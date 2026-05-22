@@ -9,8 +9,8 @@ def main():
     gemini_key = os.getenv("GEMINI_API_KEY")
     event_path = os.getenv("GITHUB_EVENT_PATH")
     
-    # Official endpoint syntax structure for Gemini 1.5 Flash
-    GEMINI_API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}"
+    # Updated to the official active model: gemini-2.5-flash
+    GEMINI_API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_key}"
     
     if not event_path:
         print("❌ Error: Missing GITHUB_EVENT_PATH context.")
@@ -33,7 +33,6 @@ def main():
     clean_user_prompt = issue_text.replace("/create-mod", "").strip()
     print(f"🎯 Cleaned user prompt text: {clean_user_prompt}")
     
-    # Corrected direct JSON structure payload for Google's API specs
     payload = {
         "contents": [{
             "parts": [{
@@ -49,17 +48,14 @@ def main():
     print("🧠 Contacting Gemini API Engine...")
     response = requests.post(GEMINI_API_URL, json=payload, headers=headers)
     
-    # Check if Google returned an actual HTTP error code
     if response.status_code != 200:
         print(f"❌ API Error Code: {response.status_code} - Details: {response.text}")
         ai_response = f"⚠️ Gemini Server Error (Status {response.status_code})."
     else:
         try:
             raw_result = response.json()
-            # Navigating the true response schema path returned by Google Studio
             ai_response = raw_result['candidates'][0]['content']['parts'][0]['text'].strip()
             
-            # Remove any markdown framing if Gemini inserts it inside the raw generation response
             if ai_response.startswith("```csharp"):
                 ai_response = ai_response.replace("```csharp", "").replace("```", "").strip()
             elif ai_response.startswith("```"):
