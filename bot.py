@@ -56,7 +56,7 @@ def main():
     else:
         raw_result = response.json()
         try:
-            # Navigate Gemini's specific JSON response structural path
+            # Fixed the IndexError parsing block typo here!
             ai_response = raw_result['candidates'][0]['content']['parts'][0]['text'].strip()
             
             # If Gemini adds code block wraps itself, strip them so we don't double-wrap down below
@@ -64,7 +64,7 @@ def main():
                 ai_response = ai_response.replace("```csharp", "").replace("```", "").strip()
             elif ai_response.startswith("```"):
                 ai_response = ai_response.replace("```", "").strip()
-        except (KeyError, IndexErrors):
+        except (KeyError, IndexError):
             ai_response = "⚠️ Failed to cleanly parse response blocks from Gemini API engine."
 
     github_headers = {
