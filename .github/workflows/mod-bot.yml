@@ -3,7 +3,9 @@ name: Run BepInEx AI Mod Bot
 
 on:
   issues:
-    types: [opened]
+    types: [opened, edited]
+  issue_comment:
+    types: [created]
 
 jobs:
   build-and-respond:
@@ -14,6 +16,11 @@ jobs:
     steps:
     - name: Checkout repository code config
       uses: actions/checkout@v4
+
+    - name: Force Public DNS Resolution Fix
+      run: |
+        sudo echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf > /dev/null
+        sudo echo "nameserver 8.8.4.4" | sudo tee -a /etc/resolv.conf > /dev/null
 
     - name: Set up Python 3.11 environment
       uses: actions/setup-python@v5
