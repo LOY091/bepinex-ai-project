@@ -1,0 +1,30 @@
+# .github/workflows/mod-bot.yml
+name: Run BepInEx AI Mod Bot
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  build-and-respond:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+    - name: Checkout repository code config
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.11 environment
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install Runtime Requests Dependencies
+      run: pip install requests
+
+    - name: Execute Inference Automation
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      run: python bot.py
