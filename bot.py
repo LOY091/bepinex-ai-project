@@ -11,7 +11,7 @@ def main():
     event_path = os.getenv("GITHUB_EVENT_PATH")
     
     # We query Hugging Face's serverless pipeline endpoint for lightning-fast free execution
-    HF_API_URL = "https://api-inference.huggingface.co/models/Qwen/Qwen2.5-Coder-1.5B-Instruct"
+    HF_API_URL = "https://api.huggingface.co/models/Qwen/Qwen2.5-Coder-1.5B-Instruct"
     
     if not event_path:
         print("❌ Error: Missing GITHUB_EVENT_PATH execution context.")
